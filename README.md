@@ -37,7 +37,7 @@ This project is designed to demonstrate proficiency in:
 - Node.js 18+
 - AWS CLI configured
 - AWS Account (free tier)
-- npm or yarn
+- pnpm (recommended) or npm/yarn
 
 ### Installation
 
@@ -46,13 +46,35 @@ This project is designed to demonstrate proficiency in:
 git clone https://github.com/diogobas/taskflow-fullstack.git
 cd taskflow-fullstack
 
-# Install frontend dependencies
+# Install frontend dependencies (pnpm recommended)
 cd frontend
-npm install
+pnpm install
 
-# Install backend dependencies
+# Install backend dependencies (pnpm recommended)
 cd ../backend
-npm install
+pnpm install
+
+# If you prefer npm instead of pnpm, run `npm install` in each package
+```
+
+CI notes
+--------
+If your CI environment uses Node.js >=16, enable Corepack and use `pnpm` for deterministic installs. Example GitHub Actions step:
+
+```yaml
+- name: Enable Corepack + Install deps
+	run: |
+		corepack enable
+		corepack prepare pnpm@latest --activate
+		pnpm install --frozen-lockfile
+	env:
+		NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # if you need private registries
+```
+
+If you don't have a `pnpm-lock.yaml` yet, generate one locally and commit it to ensure reproducible CI installs:
+
+```bash
+cd frontend && pnpm install && git add pnpm-lock.yaml && git commit -m "chore: add pnpm lock"
 ```
 
 ## 🏗️ Project Phases
