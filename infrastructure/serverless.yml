@@ -1,0 +1,107 @@
+service: taskflow-api
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    TASKS_TABLE: ${self:service}-tasks-${opt:stage, 'dev'}
+    FILES_BUCKET: ${self:service}-files-${opt:stage, 'dev'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - !GetAtt TasksTable.Arn
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource:
+            - !Sub '${FilesBucket.Arn}/*'
+
+functions:
+  createTask:
+    handler: src/handlers/tasks.createTask
+    events:
+      - httpApi:
+          path: /tasks
+          method: post
+
+  getTasks:
+    handler: src/handlers/tasks.getTasks
+    events:
+      - httpApi:
+          path: /tasks
+          method: get
+
+  updateTask:
+    handler: src/handlers/tasks.updateTask
+    events:
+      - httpApi:
+          path: /tasks/{id}
+          method: put
+
+  deleteTask:
+    handler: src/handlers/tasks.deleteTask
+    events:
+      - httpApi:
+          path: /tasks/{id}
+          method: delete
+
+resources:
+  Resources:
+    TasksTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TASKS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: StatusIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: status
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    FilesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.FILES_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+              AllowedHeaders:
+                - '*'
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
